@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+group = 'ru.rvschool'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // implementation - доступно и в main, и в test: клиент лежит в main
+    implementation 'io.rest-assured:rest-assured:5.5.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.0'
+
+    // testImplementation - только для тестов
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.11.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.11.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.11.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    // без этой строки Gradle не найдёт тесты JUnit 5
+    useJUnitPlatform()
+}
