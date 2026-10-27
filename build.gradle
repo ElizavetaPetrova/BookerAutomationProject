@@ -24,4 +24,6 @@ dependencies {
 test {
     // без этой строки Gradle не найдёт тесты JUnit 5
     useJUnitPlatform()
+    // пробрасываем -Denv из команды в процесс с тестами; по умолчанию test
+    systemProperty "env", System.getProperty("env", "test")
 }
