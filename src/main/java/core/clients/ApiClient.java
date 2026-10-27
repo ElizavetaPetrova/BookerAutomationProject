@@ -1,5 +1,10 @@
 package core.clients;
 
+import core.settings.ApiEndpoints;
+import io.restassured.RestAssured;
+import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -13,6 +18,15 @@ public class ApiClient {
     public ApiClient() {
         this.baseUrl = determineBaseUrl();
     }
+
+    // Общая заготовка запроса: адрес + заголовки. given() пишем ОДИН раз - здесь
+    private RequestSpecification getRequestSpec() {
+        return RestAssured.given()
+                .baseUri(baseUrl)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json");
+    }
+
 
     // Определяем адрес: читаем параметр env и файл application-<env>.properties
     private String determineBaseUrl() {
@@ -37,5 +51,25 @@ public class ApiClient {
 
     public String getBaseUrl() {
         return baseUrl;
+    }
+
+    public Response ping() {
+        return getRequestSpec()                    // дано: адрес и заголовки
+                .when()                            // когда: отправляем запрос
+                .get(ApiEndpoints.PING.getPath())  // GET на /ping
+                .then()                            // затем: проверяем ответ
+                .statusCode(201)                   // ожидаем 201 Created
+                .extract()                         // распаковываем...
+                .response();                       // ...весь ответ целиком
+    }
+
+    public Response getBooking() {
+        return getRequestSpec()
+                .when()
+                .get(ApiEndpoints.BOOKING.getPath())
+                .then()
+                .statusCode(200)                   // здесь ожидаем 200 OK
+                .extract()
+                .response();
     }
 }
