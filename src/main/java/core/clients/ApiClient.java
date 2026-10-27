@@ -72,4 +72,14 @@ public class ApiClient {
                 .extract()
                 .response();
     }
+
+    public Response getBookingById(int id) {
+        return getRequestSpec()
+                .when()
+                .get(ApiEndpoints.BOOKING.getPath() + "/" + id)
+                .then()
+                .statusCode(200)                   // здесь ожидаем 200 OK
+                .extract()
+                .response();
+    }
 }
