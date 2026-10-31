@@ -1,6 +1,7 @@
 package core.clients;
 
 import core.settings.ApiEndpoints;
+import io.qameta.allure.Step;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -103,6 +104,7 @@ public class ApiClient {
                 .response();                       // ...весь ответ целиком
     }
 
+    @Step("Получить список бронирований")
     public Response getBooking() {
         return getRequestSpec()
                 .when()
@@ -113,10 +115,12 @@ public class ApiClient {
                 .response();
     }
 
+
     public Response deleteBooking(int bookingId){
         return deleteBooking(bookingId, 201);
     }
 
+    @Step("Удалить бронирование с id {bookingId}")
     public Response deleteBooking(int bookingId, int expectedStatusCode) {
         return getRequestSpec()                 // фильтр добавит cookie, если токен есть
                 .pathParam("id", bookingId)     // значение для {id}
@@ -134,6 +138,7 @@ public class ApiClient {
         return getBookingById(bookingId, 200);       // по умолчанию ждём 200
     }
 
+    @Step("Получить бронирование по id")
     public Response getBookingById(int bookingId, int expectedStatusCode) {
         return getRequestSpec()
                 .pathParam("id", bookingId)
@@ -141,6 +146,20 @@ public class ApiClient {
                 .get(ApiEndpoints.BOOKING.getPath() + "/{id}")
                 .then()
                 .statusCode(expectedStatusCode)      // а здесь - что попросили
+                .extract()
+                .response();
+    }
+
+    @Step("Создать бронирование")
+    public Response createBooking(String body) {
+        return getRequestSpec()
+                .body(body)                            // тело запроса - JSON-строка
+                .log().all()                           // печатаем запрос в консоль (можно убрать)
+                .when()
+                .post(ApiEndpoints.BOOKING.getPath())  // POST /booking
+                .then()
+                .log().all()                           // печатаем ответ
+                .statusCode(200)
                 .extract()
                 .response();
     }
