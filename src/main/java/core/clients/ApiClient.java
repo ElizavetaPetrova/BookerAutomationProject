@@ -8,11 +8,13 @@ import io.restassured.specification.RequestSpecification;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import io.restassured.filter.Filter;
 
 public class ApiClient {
 
     // базовый адрес стенда: задаётся один раз при создании клиента
     private final String baseUrl;
+    private String token;
 
     // конструктор: вызывается при new ApiClient()
     public ApiClient() {
@@ -24,7 +26,9 @@ public class ApiClient {
         return RestAssured.given()
                 .baseUri(baseUrl)
                 .header("Content-Type", "application/json")
-                .header("Accept", "application/json");
+                .header("Accept", "application/json")
+                .filter(addAuthTokenFilter())
+                .filter(logRequestFilter());
     }
 
 
@@ -53,6 +57,42 @@ public class ApiClient {
         return baseUrl;
     }
 
+    public void createToken(String username, String password) {
+        // %s -> username, второй %s -> password. Кавычки внутри строки экранируем: \"
+        String body = String.format(
+                "{\"username\": \"%s\", \"password\": \"%s\"}", username, password);
+
+        Response response = getRequestSpec()
+                .body(body)                            // тело запроса - наша строка
+                .when()
+                .post(ApiEndpoints.AUTH.getPath())     // POST /auth
+                .then()
+                .statusCode(200)
+                .extract()
+                .response();
+
+        // Достаём значение по ключу "token" и кладём в поле класса
+        token = response.jsonPath().getString("token");
+    }
+
+    private Filter addAuthTokenFilter() {
+        return (requestSpec, responseSpec, ctx) -> {
+            // Если токен уже получен - добавляем cookie; если null - запрос уходит как есть
+            if (token != null) {
+                requestSpec.cookie("token", token);
+            }
+            // Передаём управление дальше: следующему фильтру или на сервер
+            return ctx.next(requestSpec, responseSpec);
+        };
+    }
+
+    private Filter logRequestFilter() {
+        return (requestSpec, responseSpec, ctx) -> {
+            System.out.println(requestSpec.getMethod() + " " + requestSpec.getURI());
+            return ctx.next(requestSpec, responseSpec);
+        };
+    }
+
     public Response ping() {
         return getRequestSpec()                    // дано: адрес и заголовки
                 .when()                            // когда: отправляем запрос
@@ -73,12 +113,34 @@ public class ApiClient {
                 .response();
     }
 
-    public Response getBookingById(int id) {
-        return getRequestSpec()
+    public Response deleteBooking(int bookingId){
+        return deleteBooking(bookingId, 201);
+    }
+
+    public Response deleteBooking(int bookingId, int expectedStatusCode) {
+        return getRequestSpec()                 // фильтр добавит cookie, если токен есть
+                .pathParam("id", bookingId)     // значение для {id}
                 .when()
-                .get(ApiEndpoints.BOOKING.getPath() + "/" + id)
+                .delete(ApiEndpoints.BOOKING.getPath() + "/{id}")   // -> /booking/7
                 .then()
-                .statusCode(200)                   // здесь ожидаем 200 OK
+                .log().all()                    // печатаем ответ в консоль - удобно смотреть, что вернулось
+                .statusCode(expectedStatusCode)                // в этом API успешное удаление = 201 Created
+                .extract()
+                .response();
+    }
+
+    // Перегрузка: две версии метода с разным набором параметров
+    public Response getBookingById(int bookingId) {
+        return getBookingById(bookingId, 200);       // по умолчанию ждём 200
+    }
+
+    public Response getBookingById(int bookingId, int expectedStatusCode) {
+        return getRequestSpec()
+                .pathParam("id", bookingId)
+                .when()
+                .get(ApiEndpoints.BOOKING.getPath() + "/{id}")
+                .then()
+                .statusCode(expectedStatusCode)      // а здесь - что попросили
                 .extract()
                 .response();
     }
